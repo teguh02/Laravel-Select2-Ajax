@@ -117,11 +117,12 @@ $('#your-select').select2({
 - **Result Limit:**  
   Adjust `result_limit` in config to control how many results are returned.
 
-## Error Handling
+## HTTP Codes
 
-- Returns `400` if the query type is invalid.
-- Returns `404` if the model configuration is missing.
-- Returns `500` for unexpected errors (see Laravel logs for details).
+- **200**: Success, data returned as expected.
+- **400**: The query type is invalid.
+- **404**: The model configuration is missing.
+- **500**: Unexpected errors (see Laravel logs for details).
 
 ## License
 
