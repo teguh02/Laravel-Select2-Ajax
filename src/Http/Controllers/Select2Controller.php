@@ -41,13 +41,23 @@ class Select2Controller extends Controller
                 return response()->json(['error' => "Query configuration for {$query} not found."], 404);
             }
 
+            // Check if id and text fields are set
+            if (!isset($details['id']) || !isset($details['text'])) {
+                return response()->json(['error' => "ID and text fields for {$query} are not properly configured."], 500);
+            }
+
+            // Check if searchable is null or not set, then throw an error
+            if (!isset($details['searchable']) || !is_array($details['searchable'])) {
+                return response()->json(['error' => "Searchable fields for {$query} are not properly configured."], 500);
+            }
+
             $queryBuilder = function () use ($models, $details, $q) {
                 return app($models)::query()
                 ->selectRaw("{$details['id']} as id, {$details['text']} as text")
                 ->when(isset($details['where']) && filled($details['where']) && is_callable($details['where']), function ($query) use ($details) {
                     return $details['where']($query);
                 })
-                ->when(filled($details['searchable']) and filled($q), function ($query) use ($q, $details) {
+                ->when(filled($details['searchable']) and filled($q) and is_array($details['searchable']), function ($query) use ($q, $details) {
                     foreach ($details['searchable'] as $field) {
                         $query->orWhereRaw("LOWER({$field}) LIKE ?", ['%' . strtolower($q) . '%']);
                     }
@@ -76,7 +86,12 @@ class Select2Controller extends Controller
 
             return response()->json(['data' => $data]);
         } catch (\Throwable $th) {
-            Log::error($th);
+            Log::error('Select2Controller search error', [
+                'message' => $th->getMessage(),
+                'file' => $th->getFile(),
+                'line' => $th->getLine(),
+                'trace' => $th->getTraceAsString(),
+            ]);
             return response()->json(['error' => 'An error occurred while processing your request.'], 500);
         }
     }
