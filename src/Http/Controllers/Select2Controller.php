@@ -52,7 +52,13 @@ class Select2Controller extends Controller
                         $query->orWhereRaw("LOWER({$field}) LIKE ?", ['%' . strtolower($q) . '%']);
                     }
                 })
-                ->orderBy($details['order_by'] ?? $details['text'], 'asc')
+                ->when(isset($details['order_by']) && is_array($details['order_by']), function ($query) use ($details) {
+                    foreach ($details['order_by'] as $field => $direction) {
+                        $query->orderBy($field, $direction);
+                    }
+                }, function ($query) use ($details) {
+                    $query->orderBy($details['text'], 'asc');
+                })
                 ->limit(config('select2-ajax.result_limit', 10))
                 ->get();
             };
