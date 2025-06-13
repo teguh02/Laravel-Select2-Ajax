@@ -1,84 +1,139 @@
-# Laravel API Backend for Select2 Ajax
+# Laravel Select2 Ajax API Backend
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/teguh02/laravel-select2-ajax.svg?style=flat-square)](https://packagist.org/packages/teguh02/laravel-select2-ajax)
-[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/teguh02/laravel-select2-ajax/run-tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/teguh02/laravel-select2-ajax/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://img.shields.io/github/actions/workflow/status/teguh02/laravel-select2-ajax/fix-php-code-style-issues.yml?branch=main&label=code%20style&style=flat-square)](https://github.com/teguh02/laravel-select2-ajax/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/teguh02/laravel-select2-ajax.svg?style=flat-square)](https://packagist.org/packages/teguh02/laravel-select2-ajax)
+A simple, flexible, and reusable backend API for [Select2](https://select2.org/) AJAX dropdowns in Laravel.
 
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
+## Features
 
-## Support us
-
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/Laravel-Select2-Ajax.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/Laravel-Select2-Ajax)
-
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
-
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+- Dynamic model and field configuration via config file
+- Supports search, filtering, and custom where clauses
+- Caching support for improved performance
+- Pagination/limit support
+- Easy integration with Select2 frontend
 
 ## Installation
 
-You can install the package via composer:
+Install the package via Composer:
 
 ```bash
 composer require teguh02/laravel-select2-ajax
 ```
 
-You can publish and run the migrations with:
+Publish the configuration file:
 
 ```bash
-php artisan vendor:publish --tag="laravel-select2-ajax-migrations"
-php artisan migrate
+php artisan vendor:publish --provider="TeguhRijanandi\LaravelSelect2Ajax\LaravelSelect2AjaxServiceProvider"
 ```
 
-You can publish the config file with:
+1. **Register the service provider and routes as needed.**
+2. **Publish the configuration file (if available).**
 
-```bash
-php artisan vendor:publish --tag="laravel-select2-ajax-config"
-```
+## Configuration
 
-This is the contents of the published config file:
+Configure your searchable models and fields in `config/select2-ajax.php`:
 
 ```php
 return [
+    'query' => [
+        // Example:
+        \App\Models\User::class => [
+            'id' => 'id', // The field that will be used as the id in the response.
+            'text' => 'name', // The field that will be used as the text in the response.
+            'searchable' => ['name', 'email'], // The fields that will be used for searching.
+            // Optional:
+            // 'order_by' => 'name', // The field that will be used for ordering the results.
+            // 'where' => fn($query) => $query->where('active', 1), // The where clause for the query.
+        ],
+        // Add more models as needed...
+    ],
+    'result_limit' => 10,
+    'cache_ttl' => 60, // seconds, 0 = no cache
 ];
 ```
 
-Optionally, you can publish the views using
-
-```bash
-php artisan vendor:publish --tag="laravel-select2-ajax-views"
-```
+**Configuration Notes:**
+- `id`: The field that will be used as the id in the response.
+- `text`: The field that will be used as the text in the response.
+- `searchable`: The fields that will be used for searching.
+- `order_by`: The field that will be used for ordering the results.
+- `where`: The where clause for the query (closure).
 
 ## Usage
 
-```php
-$laravelSelect2Ajax = new TeguhRijanandi\LaravelSelect2Ajax();
-echo $laravelSelect2Ajax->echoPhrase('Hello, TeguhRijanandi!');
+### API Endpoint
+
+Send a GET or POST request to the endpoint (e.g. `/api/select2/search`) with the following parameters:
+
+- `q` (string): The search term entered by the user.
+- `query` (string): The model key as configured (e.g. `User`).
+
+**Example Request:**
+
+```http
+GET /api/select2/search?q=john&query=User
 ```
 
-## Testing
+**Example Response:**
 
-```bash
-composer test
+```json
+{
+  "data": [
+    { "id": 1, "text": "John Doe" },
+    { "id": 2, "text": "Johnny Appleseed" }
+  ]
+}
 ```
 
-## Changelog
+### Frontend Integration
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+Configure your Select2 input to use AJAX:
 
-## Contributing
+```javascript
+$('#your-select').select2({
+    ajax: {
+        url: '/api/select2/search',
+        dataType: 'json',
+        delay: 250,
+        data: function (params) {
+            return {
+                q: params.term,
+                query: 'User' // or your configured model key
+            };
+        },
+        processResults: function (data) {
+            return {
+                results: data.data
+            };
+        }
+    }
+});
+```
 
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+## Advanced
 
-## Security Vulnerabilities
+- **Custom Filtering:**  
+  Use the `where` closure in config for custom query logic.
+- **Caching:**  
+  Set `cache_ttl` in config to cache results for faster repeated queries.
+- **Result Limit:**  
+  Adjust `result_limit` in config to control how many results are returned.
 
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
+## Error Handling
 
-## Credits
-
-- [Teguh Rijanandi](https://github.com/teguh02)
-- [All Contributors](../../contributors)
+- Returns `400` if the query type is invalid.
+- Returns `404` if the model configuration is missing.
+- Returns `500` for unexpected errors (see Laravel logs for details).
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+MIT or your preferred license.
+
+## Contributing
+
+Contributions are welcome! To contribute to this library:
+
+1. **Fork the repository** and create your branch from `main`.
+2. **Make your changes** with clear commit messages.
+3. **Test your changes** to ensure nothing is broken.
+4. **Submit a pull request** describing your changes and why they should be merged.
+
+If you find a bug or have a feature request, please open an issue.
