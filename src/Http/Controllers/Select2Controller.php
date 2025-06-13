@@ -3,6 +3,7 @@
 namespace TeguhRijanandi\LaravelSelect2Ajax\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Database\Eloquent\Collection;
 use TeguhRijanandi\LaravelSelect2Ajax\Http\Requests\SearchRequest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -51,40 +52,45 @@ class Select2Controller extends Controller
                 return response()->json(['error' => "Searchable fields for {$query} are not properly configured."], 500);
             }
 
-            $queryBuilder = function () use ($models, $details, $q) {
-                return app($models)::query()
-                ->selectRaw("{$details['id']} as id, {$details['text']} as text")
-                ->when(isset($details['where']) && filled($details['where']) && is_callable($details['where']), function ($query) use ($details) {
-                    return $details['where']($query);
-                })
-                ->when(filled($details['searchable']) and filled($q) and is_array($details['searchable']), function ($query) use ($q, $details) {
-                    foreach ($details['searchable'] as $field) {
-                        $query->orWhereRaw("LOWER({$field}) LIKE ?", ['%' . strtolower($q) . '%']);
-                    }
-                })
-                ->when(isset($details['order_by']) && is_array($details['order_by']), function ($query) use ($details) {
-                    foreach ($details['order_by'] as $field => $direction) {
-                        $query->orderBy($field, $direction);
-                    }
-                }, function ($query) use ($details) {
-                    $query->orderBy($details['text'], 'asc');
-                })
-                ->limit(config('select2-ajax.result_limit', 10))
-                ->get();
-            };
+            // Get all data from the model (collection_builder already handles caching)
+            $raw_data = $this->collection_builder($models, $details, $cacheTtl);
 
-            if ($cacheTtl > 0) {
-                $cacheKey = 'select2:' . md5(json_encode([
-                    'models' => $models,
-                    'details' => $details,
-                    'q' => $q,
-                ]));
-                $data = Cache::remember($cacheKey, $cacheTtl, $queryBuilder);
-            } else {
-                $data = $queryBuilder();
+            // If the query is empty, return all data with limit
+            if (empty($q)) {
+                $data = $raw_data->map(function ($item) use ($details) {
+                    return [
+                        'id' => $item[$details['id']],
+                        'text' => $item[$details['text']],
+                    ];
+                })
+                ->values()
+                ->take(config('select2-ajax.result_limit', 10))
+                ->all();
+
+                return response()->json(['data' => $data]);
             }
 
-            return response()->json(['data' => $data]);
+            // Filter and map the data based on the query and searchable fields
+            $filteredData = $raw_data->filter(function ($item) use ($q, $details) {
+                foreach ($details['searchable'] as $field) {
+                    if (isset($item[$field]) && stripos($item[$field], $q) !== false) {
+                        return true;
+                    }
+                }
+                return false;
+            })
+            ->map(function ($item) use ($details) {
+                return [
+                    'id' => $item[$details['id']],
+                    'text' => $item[$details['text']],
+                ];
+            })
+            ->values()
+            ->take(config('select2-ajax.result_limit', 10))
+            ->all();
+
+            // Return the data as a JSON response
+            return response()->json(['data' => $filteredData]);
         } catch (\Throwable $th) {
             Log::error('Select2Controller search error', [
                 'message' => $th->getMessage(),
@@ -93,6 +99,47 @@ class Select2Controller extends Controller
                 'trace' => $th->getTraceAsString(),
             ]);
             return response()->json(['error' => 'An error occurred while processing your request.'], 500);
+        }
+    }
+
+    /**
+     * Build a collection from the model based on the provided details.
+     *
+     * @param string $models
+     * @param array $details
+     * @return Collection
+     */
+    protected function collection_builder(string $models, array $details, int $cacheTtl = 0): Collection
+    {
+        try {
+            $cacheKey = 'select2:collection:' . md5(json_encode([$models, $details]));
+            $select = "{$details['id']} as id, {$details['text']} as text";
+            if (!empty($details['searchable'])) {
+                $select .= ', ' . implode(',', $details['searchable']);
+            }
+
+            $query = fn() => app($models)::query()
+                                        ->selectRaw($select)
+                                        ->when(isset($details['order_by']) && is_array($details['order_by']), function ($query) use ($details) {
+                                            foreach ($details['order_by'] as $field => $direction) {
+                                                $query->orderBy($field, $direction);
+                                            }
+                                        }, function ($query) use ($details) {
+                                            $query->orderBy($details['text'], 'asc');
+                                        })
+                                        ->get();
+
+            return $cacheTtl > 0
+                ? Cache::remember($cacheKey, $cacheTtl, $query)
+                : $query();
+        } catch (\Throwable $th) {
+            Log::error('Select2Controller collection_builder error', [
+                'message' => $th->getMessage(),
+                'file' => $th->getFile(),
+                'line' => $th->getLine(),
+                'trace' => $th->getTraceAsString(),
+            ]);
+            return new Collection();
         }
     }
 }
