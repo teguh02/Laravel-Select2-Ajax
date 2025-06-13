@@ -32,10 +32,7 @@
         "laravel": {
             "providers": [
                 "TeguhRijanandi\\LaravelSelect2Ajax\\LaravelSelect2AjaxServiceProvider"
-            ],
-            "aliases": {
-                "LaravelSelect2Ajax": "TeguhRijanandi\\LaravelSelect2Ajax\\Facades\\LaravelSelect2Ajax"
-            }
+            ]
         }
     },
     "minimum-stability": "stable",
