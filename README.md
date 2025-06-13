@@ -50,12 +50,58 @@ return [
 ];
 ```
 
-**Configuration Notes:**
-- `id`: The field that will be used as the id in the response.
-- `text`: The field that will be used as the text in the response.
-- `searchable`: The fields that will be used for searching.
-- `order_by`: The field that will be used for ordering the results.
-- `where`: The where clause for the query (closure).
+**Configuration Attributes Guide:**
+
+- **search_url**  
+  The URL for the Select2 search API endpoint.  
+  Default: `/select2/search`  
+  Set via `SELECT2_SEARCH_URL` in your `.env` file.
+
+- **search_route_name**  
+  The route name for the Select2 search API endpoint.  
+  Default: `select2.search`  
+  Set via `SELECT2_SEARCH_ROUTE_NAME` in your `.env` file.
+
+- **result_limit**  
+  The maximum number of results returned by the search query.  
+  Default: `10`  
+  Set via `SELECT2_RESULT_LIMIT` in your `.env` file.
+
+- **query**  
+  The configuration for each model you want to make searchable.  
+  Each model config supports:
+  - `id`: The field used as the id in the response.
+  - `text`: The field used as the text in the response.
+  - `searchable`: The fields used for searching.
+  - `order_by`: The fields used for ordering the results. Example: `['name' => 'asc']`
+  - `where`: The where clause for the query. Can be `null` or a closure for custom filtering.
+
+  **Example:**
+  ```php
+  'query' => [
+      \App\Models\User::class => [
+          'id' => 'id',
+          'text' => 'name',
+          'searchable' => ['name', 'email'],
+          'order_by' => ['name' => 'asc'],
+          'where' => null,
+          // 'where' => function ($query) {
+          //     return $query->whereNotNull('email_verified_at');
+          // },
+      ],
+      // Add more models as needed
+  ],
+  ```
+
+- **cache_ttl**  
+  The cache time-to-live (TTL) in minutes for search results.  
+  Set to `0` to disable caching.  
+  Default: `60`
+
+- **middleware**  
+  The middleware(s) applied to the Select2 search API route.  
+  Default: `['api']`  
+  You can customize this to add authentication or other middleware as needed.
 
 ## Usage
 
