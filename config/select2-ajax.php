@@ -14,6 +14,7 @@ return [
     | This will be return /api/select2/search by default.
     |
     */
+
     'search_url' => env('SELECT2_SEARCH_URL', '/select2/search'),
 
     /*
@@ -25,6 +26,7 @@ return [
     | when the framework needs to perform a search using the Select2 component.
     |
     */
+
     'search_route_name' => env('SELECT2_SEARCH_ROUTE_NAME', 'select2.search'),
 
     /*
@@ -37,7 +39,8 @@ return [
     | You can set this value in your .env file.
     |
     */
-    'result_limit' => env('SELECT2_RESULT_LIMIT', 10),
+
+    'result_limit' => env('SELECT2_RESULT_LIMIT', 20),
 
     /*
     |--------------------------------------------------------------------------
@@ -107,6 +110,7 @@ return [
     */
 
     'middleware' => [
-        'api'
+        'api',
+        'throttle:60,1',
     ],
 ];
