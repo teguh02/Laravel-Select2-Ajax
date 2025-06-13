@@ -85,7 +85,7 @@ GET /api/select2/search?q=john&query=User
 
 ### Frontend Integration
 
-Configure your Select2 input to use AJAX:
+Configure your Select2 input to use AJAX, for example:
 
 ```javascript
 $('#your-select').select2({
@@ -103,6 +103,18 @@ $('#your-select').select2({
             return {
                 results: data.data
             };
+        },
+        error: function (jqXHR, textStatus, errorThrown) {
+            // see the HTTP Codes guide in package documentation
+            if (jqXHR.status === 400) {
+                alert('Invalid query type.');
+            } else if (jqXHR.status === 404) {
+                alert('Model configuration not found.');
+            } else if (jqXHR.status === 500) {
+                alert('Unexpected server error. Please check the logs.');
+            } else {
+                alert('An unknown error occurred.');
+            }
         }
     }
 });
