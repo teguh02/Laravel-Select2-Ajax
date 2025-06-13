@@ -57,16 +57,9 @@ class Select2Controller extends Controller
 
             // If the query is empty, return all data with limit
             if (empty($q)) {
-                $data = $raw_data->map(function ($item) use ($details) {
-                    return [
-                        'id' => $item[$details['id']],
-                        'text' => $item[$details['text']],
-                    ];
-                })
-                ->values()
-                ->take(config('select2-ajax.result_limit', 10))
-                ->all();
-
+                $data = $raw_data->take(config('select2-ajax.result_limit', 10))
+                                    ->values()
+                                    ->all();
                 return response()->json(['data' => $data]);
             }
 
@@ -79,14 +72,8 @@ class Select2Controller extends Controller
                 }
                 return false;
             })
-            ->map(function ($item) use ($details) {
-                return [
-                    'id' => $item[$details['id']],
-                    'text' => $item[$details['text']],
-                ];
-            })
-            ->values()
             ->take(config('select2-ajax.result_limit', 10))
+            ->values()
             ->all();
 
             // Return the data as a JSON response
